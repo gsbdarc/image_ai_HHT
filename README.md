@@ -36,16 +36,9 @@ python -m ipykernel install --user --name=image-ai
 
 Run:
 ```bash
-
-python download_cifar10.py
-python extract_cifar10_images.py
-python prepare_data_splits.py
-python create_test_jsonl_base_model.py
 ```
-Open `vision-fine-tune.ipynb` notebook.
 
 After fine-tuning is complete, run:
 
 ```
-python create_test_jsonl_finetuned.py
 ```
