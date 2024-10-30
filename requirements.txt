@@ -1,0 +1,9 @@
+numpy
+pandas
+seaborn
+scikit-learn
+openai 
+torchvision 
+matplotlib
+ipykernel
+python-dotenv

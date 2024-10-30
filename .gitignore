@@ -1,3 +1,9 @@
+**/results
+**/data
 **/venv
 **/out
+**/.venv
 **/.env
+**/.ipynb_checkpoints/
+**/__pycache__/
+**/.jsonl
