@@ -38,8 +38,8 @@ The software environment including the operating system, Python version, and CUD
 - CUDA Version: CUDA 12.4
 
 ## Research Software Stack
-- Torch Version: 2.3.0 
-- Transformers Library Version: 4.40
+- Torch Version: 2.5.0 
+- Transformers Library Version: 4.46
 - AI Model Version: `meta-llama/Meta-Llama-3.2-11B-Vision-Instruct`
 
 # How to Create Llama 3.2 Chat Completion `venv` on the Yens 
