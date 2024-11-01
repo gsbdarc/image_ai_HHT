@@ -25,8 +25,8 @@ from PIL import Image
 random.seed(42)
 
 proj_dir = f'/zfs/projects/darc/nrapstin_hht_image_ai'
-image_dir = f"{proj_dir}/stanford-cars/data/images"
-BATCH_FILE = f'{proj_dir}/stanford-cars/gpt/data/batches.json'
+image_dir = f'/scratch/shared/image_ai_HHT_data/images'
+BATCH_FILE = 'data/batches.json'
 
 def encode_image(image_path):
     """
@@ -95,10 +95,9 @@ def is_correct_prediction(ground_truth_year, predicted_years):
     """
     return ground_truth_year in predicted_years
 
-def compute_accuracy(df_test):
+def is_prediction_correct(df_test):
     """
-    Computes the accuracy of the model predictions by comparing the ground truth years
-    with the predicted years extracted from the GPT responses.
+    Computes how the model prediction extracted from the GPT responses compares to the ground truth years.
 
     Parameters:
         df_test (pd.DataFrame): The test DataFrame containing 'GPT_Response' and 'Ground Truth Year'.
@@ -189,8 +188,8 @@ def make_test_data(df):
     similar_cars_df = df[df['Class Name'].isin(selected_classes)].reset_index(drop=True)
 
     # Specify the folder path
-    data_path = f"{proj_dir}/stanford-cars/gpt/data"
-    results_path = f"{proj_dir}/stanford-cars/gpt/results"
+    data_path = "data"
+    results_path = "results"
     
     # Create the folder if it does not exist
     os.makedirs(data_path, exist_ok=True)
@@ -372,7 +371,7 @@ def prepare_ft_data(df):
         test_data[cls] = test_images
 
     # Define output directories and file paths
-    fine_tune_dir = f'{proj_dir}/stanford-cars/gpt/data/fine-tune'
+    fine_tune_dir = 'data/fine-tune'
     train_jsonl_path = f'{fine_tune_dir}/train.jsonl'
     val_jsonl_path = f'{fine_tune_dir}/val.jsonl'
     train_image_paths_file = f'{fine_tune_dir}/train_image_paths.txt'
