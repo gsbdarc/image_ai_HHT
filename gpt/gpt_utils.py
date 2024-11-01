@@ -1,21 +1,28 @@
 """
-Script containing helper functions for GPT-based image analysis notebooks.
-
-This script includes functions to:
-- Extract the ground truth year from car class names.
-- Extract predicted years from GPT responses.
-- Compare ground truth years with predicted years to compute accuracy.
-- Prepare test and prompt datasets for zero-shot and few-shot GPT examples.
-- Plot per-model accuracy based on the predictions.
-- Display images used in few shot prompt.
-
-These functions assist in processing and evaluating GPT model outputs in the context
-of image analysis of car models and years. They are designed to facilitate the preparation
-of data, computation of accuracy metrics, and visualization of results for analysis.
+GPT Image Processing Utilities
 
 Author: Natalya Rapstine
 Email: nrapstin@stanford.edu
-Date: Oct. 30, 2024
+Date: Nov. 1, 2024
+
+Description:
+This script contains a collection of utility functions for processing images and preparing data for fine-tuning GPT models, specifically for tasks like identifying the year of cars in images. The functions cover various steps such as encoding images, extracting years from class names and responses, computing accuracy, preparing datasets, and more.
+
+Functions Included:
+- encode_image(image_path): Encodes an image file to a base64 string.
+- extract_ground_truth_year(class_name): Extracts the first four-digit year from the class name string.
+- extract_predicted_years(response): Extracts all four-digit years and year ranges from a given response string.
+- is_correct_prediction(ground_truth_year, predicted_years): Checks if the ground truth year is present in the predicted years.
+- compute_accuracy(df_test): Computes the accuracy of model predictions by comparing ground truth with predictions.
+- plot_per_model_accuracy(df_test): Generates a per-model accuracy plot and displays a confusion matrix-like table.
+- make_test_data(df): Prepares test and prompt datasets for GPT zero-shot and few-shot examples.
+- show_prompt_images(prompt_df): Displays images from the prompt DataFrame in a grid layout.
+- check_and_convert_image_modes(image_paths): Checks images for correct mode and converts them to RGB if necessary.
+- prepare_ft_data(df): Prepares data for fine-tuning by splitting the dataset and creating JSONL files.
+- create_jsonl(selected_data, jsonl_path, image_paths_file, image_dir): Creates a JSONL file from the selected data for fine-tuning.
+- save_batch_id(batch_id, key): Saves the batch ID to a JSON file under the specified key.
+- load_batch_id(key): Loads the batch ID from the JSON file using the specified key.
+
 """
 
 import pandas as pd
@@ -33,10 +40,18 @@ random.seed(42)
 
 proj_dir = f'/zfs/projects/darc/nrapstin_hht_image_ai'
 image_dir = f"{proj_dir}/stanford-cars/data/images"
-BATCH_FILE = 'data/batches.json'
+BATCH_FILE = f'{proj_dir}/stanford-cars/gpt/data/batches.json'
 
-# Function to encode the image
 def encode_image(image_path):
+    """
+    Encodes an image file to a base64 string.
+
+    Parameters:
+    - image_path (str): The file path to the image that needs to be encoded.
+
+    Returns:
+    - str: A base64 encoded string representation of the image.
+    """
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
         
@@ -187,9 +202,6 @@ def make_test_data(df):
     # Filter the DataFrame to include only the selected classes
     similar_cars_df = df[df['Class Name'].isin(selected_classes)].reset_index(drop=True)
 
-    # print(f'similar_cars_df.shape: {similar_cars_df.shape}')
-    # print(f'similar_cars_df.head: {similar_cars_df.head()}')
-
     # Specify the folder path
     data_path = f"{proj_dir}/stanford-cars/gpt/data"
     results_path = f"{proj_dir}/stanford-cars/gpt/results"
@@ -220,9 +232,9 @@ def make_test_data(df):
     # Shuffle the rows of the DataFrame
     test_df = test_df.sample(frac=1).reset_index(drop=True)
 
-    # save test df
+    # Save test df
     test_df.to_csv(f"{data_path}/test-df.csv", index=False)
-    # save prompt images
+    # Save prompt images
     prompt_df.to_csv(f"{data_path}/prompt-df.csv", index=False)
 
 
@@ -276,42 +288,60 @@ def show_prompt_images(prompt_df):
     plt.show()
 
 
+def check_and_convert_image_modes(image_paths):
+    """
+    Checks a list of image paths to identify images that are not in RGB or RGBA mode,
+    and converts them to RGB format if necessary.
 
-def check_image_modes(image_paths):
+    This function iterates over a list of image file paths, opens each image,
+    checks its mode, and if the image mode is not 'RGB' or 'RGBA', it converts
+    the image to 'RGB' mode and saves it back to the same path. This is useful
+    for datasets where images are expected to be in RGB format, such as when
+    fine-tuning GPT-4o.
+
+    Parameters:
+    - image_paths (list of str): A list of file paths to the images to be checked and converted.
+
+    Returns:
+    - None
     """
-    This dataset has some images in L mode, not in RGB that is expected for fine-tuning GPT-4o
-    """
-    non_rgb_images = []
     for image_path in image_paths:
         try:
             with Image.open(image_path) as img:
                 if img.mode not in ('RGB', 'RGBA'):
-                    non_rgb_images.append(image_path)
-                    print(f"Image {image_path} is in mode {img.mode}")
-        except Exception as e:
-            print(f"Error opening image {image_path}: {e}")
-    return non_rgb_images
-
-def convert_to_rgb(image_paths):
-    """
-
-    """
-    for image_path in image_paths:
-        try:
-            with Image.open(image_path) as img:
-                if img.mode not in ('RGB', 'RGBA'):
+                    print(f"Image {image_path} is in mode {img.mode}. Converting to RGB.")
                     rgb_img = img.convert('RGB')
                     rgb_img.save(image_path)
-                    print(f"Converted {image_path} to RGB.")
         except Exception as e:
             print(f"Error processing image {image_path}: {e}")
 
 
+
 def prepare_ft_data(df):
     """
+    Prepares data for fine-tuning by splitting the dataset into training, validation, and test sets,
+    converting images to RGB format if necessary, and creating JSONL files for training.
+
+    Steps:
+    - Extracts 'Ground Truth Year' from 'Class Name' in the DataFrame.
+    - Splits data into training, validation, and test sets for each class.
+    - Adjusts counts if there are not enough images per class.
+    - Shuffles images and assigns them to respective sets.
+    - Checks if JSONL files already exist to avoid redundant processing.
+    - Converts non-RGB images to RGB format.
+    - Creates JSONL files for training and validation data.
+    - Saves test image paths for later use.
+
+    Parameters:
+    - df (pandas.DataFrame): DataFrame containing image data and class labels.
+
+    Returns:
+    - None
     """
+    # Extract 'Ground Truth Year' from 'Class Name'
     df['Ground Truth Year'] = df['Class Name'].apply(extract_ground_truth_year)
     classes = df['Ground Truth Year'].unique()
+    
     # Initialize dictionaries for train, val, test data
     train_data = {}
     val_data = {}
@@ -321,7 +351,8 @@ def prepare_ft_data(df):
     train_count = 15
     val_count = 10
     test_count = 10
-    
+ 
+
     for cls in classes:
         cls_df = df[df['Ground Truth Year'] == cls]
         image_paths = cls_df['image'].tolist()
@@ -354,67 +385,73 @@ def prepare_ft_data(df):
         val_data[cls] = val_images
         test_data[cls] = test_images
 
-    os.makedirs(f'{proj_dir}/stanford-cars/gpt/data/fine-tune', exist_ok=True)
+    # Define output directories and file paths
+    fine_tune_dir = f'{proj_dir}/stanford-cars/gpt/data/fine-tune'
+    train_jsonl_path = f'{fine_tune_dir}/train.jsonl'
+    val_jsonl_path = f'{fine_tune_dir}/val.jsonl'
+    train_image_paths_file = f'{fine_tune_dir}/train_image_paths.txt'
+    val_image_paths_file = f'{fine_tune_dir}/val_image_paths.txt'
+    test_image_paths_file = f'{fine_tune_dir}/test_image_paths.txt'
+
+    # Create directories if they do not exist
+    os.makedirs(fine_tune_dir, exist_ok=True)
     
-    create_jsonl(train_data, f'{proj_dir}/stanford-cars/gpt/data/fine-tune/train.jsonl', f'{proj_dir}/stanford-cars/gpt/data/fine-tune/train_image_paths.txt', image_dir)
-    create_jsonl(val_data, f'{proj_dir}/stanford-cars/gpt/data/fine-tune/val.jsonl', f'{proj_dir}/stanford-cars/gpt/data/fine-tune/val_image_paths.txt', image_dir)
+    # Check if JSONL files already exist
+    if os.path.exists(train_jsonl_path) and os.path.exists(val_jsonl_path):
+        print("JSONL files already exist. Skipping creation.")
+    else:
+        # Create JSONL files for training and validation data
 
-    # Read image paths from your train_image_paths.txt file
-    with open(f'{proj_dir}/stanford-cars/gpt/data/fine-tune/train_image_paths.txt', 'r') as f:
-        train_image_paths = [line.strip() for line in f.readlines()]
-    
-    non_rgb_images = check_image_modes(train_image_paths)
-    # print(f"Found {len(non_rgb_images)} non-RGB/RGBA images.")
-    
-    # Convert the non-RGB images
-    convert_to_rgb(non_rgb_images)
+        # Process training images
+        with open(train_image_paths_file, 'r') as f:
+            train_image_paths = [line.strip() for line in f.readlines()]
+        
+        # Check and convert non-RGB images in training data
+        check_and_convert_image_modes(train_image_paths)
+        
+        # Recreate JSONL file after conversion
+        create_jsonl(train_data, train_jsonl_path, train_image_paths_file, image_dir)
 
-    create_jsonl(train_data, f'{proj_dir}/stanford-cars/gpt/data/fine-tune/train.jsonl', f'{proj_dir}/stanford-cars/gpt/data/fine-tune/train_image_paths.txt', image_dir)
-    total_train_examples = sum(len(images) for images in train_data.values())
-    # print(f"Total training examples: {total_train_examples}")
-
-    # Verify that all images are now RGB/RGBA
-    non_rgb_images_after = check_image_modes(train_image_paths)
-    # print(f"After conversion, found {len(non_rgb_images_after)} non-RGB/RGBA images.")
-
-    # Read image paths from your val_image_paths.txt file
-    with open(f'{proj_dir}/stanford-cars/gpt/data/fine-tune/val_image_paths.txt', 'r') as f:
-        val_image_paths = [line.strip() for line in f.readlines()]
-    
-    # Check and convert images
-    non_rgb_images_val = check_image_modes(val_image_paths)
-    # print(f"Found {len(non_rgb_images_val)} non-RGB/RGBA images.")
-
-    convert_to_rgb(non_rgb_images_val)
-    # Check and convert images
-    non_rgb_images_val = check_image_modes(val_image_paths)
-    # print(f"Found {len(non_rgb_images_val)} non-RGB/RGBA images.")
-
-    create_jsonl(val_data, f'{proj_dir}/stanford-cars/gpt/data/fine-tune/val.jsonl', f'{proj_dir}/stanford-cars/gpt/data/fine-tune/val_image_paths.txt', image_dir)
+        # Process validation images
+        with open(val_image_paths_file, 'r') as f:
+            val_image_paths = [line.strip() for line in f.readlines()]
+        
+        # Check and convert non-RGB images in validation data
+        check_and_convert_image_modes(val_image_paths)
+        
+        create_jsonl(val_data, val_jsonl_path, val_image_paths_file, image_dir)
 
     # Save test image paths with full paths
-    with open(f'{proj_dir}/stanford-cars/gpt/data/fine-tune/test_image_paths.txt', 'w') as f:
+    with open(test_image_paths_file, 'w') as f:
         for cls, paths in test_data.items():
             for path in paths:
                 full_path = os.path.join(image_dir, path)
                 f.write(f"{full_path}\n")
 
-
-    # Read image paths from your test_image_paths.txt file
-    with open(f'{proj_dir}/stanford-cars/gpt/data/fine-tune/test_image_paths.txt', 'r') as f:
+    # Process test images
+    with open(test_image_paths_file, 'r') as f:
         test_image_paths = [line.strip() for line in f.readlines()]
     
-    non_rgb_images = check_image_modes(test_image_paths)
-    # print(f"Found {len(non_rgb_images)} non-RGB/RGBA images.")
-
-    convert_to_rgb(non_rgb_images)
-    non_rgb_images = check_image_modes(test_image_paths)
-    # print(f"Found {len(non_rgb_images)} non-RGB/RGBA images.")
-
+    # Check and convert non-RGB images in test data
+    check_and_convert_image_modes(test_image_paths)
 
 
 def create_jsonl(selected_data, jsonl_path, image_paths_file, image_dir):
     """
+    Creates a JSONL file from the selected data for fine-tuning GPT models and saves image paths.
+
+    This function processes images specified in `selected_data`, encodes them in base64 format,
+    constructs JSON objects suitable for fine-tuning GPT models, and writes them to a JSONL file.
+    It also saves the paths of the images used in a separate file.
+
+    Parameters:
+    - selected_data (dict): A dictionary where keys are class labels and values are lists of image paths.
+    - jsonl_path (str): The file path where the JSONL output will be saved.
+    - image_paths_file (str): The file path where the list of image paths used will be saved.
+    - image_dir (str): The directory where the images are located.
+
+    Returns:
+    - None
     """
     examples = []
     all_image_paths = []
@@ -477,7 +514,6 @@ def create_jsonl(selected_data, jsonl_path, image_paths_file, image_dir):
         for path in all_image_paths:
             f.write(f"{path}\n")
     print(f"Saved image paths to {image_paths_file}")
-
 
 def save_batch_id(batch_id, key):
     """

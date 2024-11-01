@@ -2,7 +2,7 @@
 **/data
 **/venv
 **/out
-**/.out
+**/*.out
 **/.venv
 **/.env
 **/.ipynb_checkpoints/

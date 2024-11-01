@@ -1,12 +1,12 @@
 """
-Test Data Preparation Script
+Fine-Tuned Model Test Data Preparation Script
 
 Author: Natalya Rapstine
 Email: nrapstin@stanford.edu
 Date: Nov. 1, 2024
 
 Description:
-This script prepares test data for evaluating a GPT-based model on car images.
+This script prepares test data for evaluating a fine-tuned GPT-based model on car images.
 It processes a set of car images, encodes them in base64, constructs JSONL entries
 for API requests, and saves ground truth labels for evaluation.
 """
@@ -23,15 +23,15 @@ proj_dir = f'/zfs/projects/darc/nrapstin_hht_image_ai'
 
 # Define file paths and constants
 TEST_IMAGE_PATHS_FILE = f'{proj_dir}/stanford-cars/gpt/data/fine-tune/test_image_paths.txt'
-TEST_JSONL = f'{proj_dir}/stanford-cars/gpt/data/fine-tune/test_base_model.jsonl'
+TEST_JSONL = f'{proj_dir}/stanford-cars/gpt/data/fine-tune/test_ft_model.jsonl'
 TEST_LABELS_FILE = f'{proj_dir}/stanford-cars/gpt/data/fine-tune/test_labels.json'
-MODEL = "gpt-4o-2024-08-06"
+MODEL = "ft:gpt-4o-2024-08-06:gsb-darc-team::AOAURXbh" 
 IMAGE_DIR = f'{proj_dir}/stanford-cars/data/images'
 data_file = f"{proj_dir}/stanford-cars/data/train.csv"
 
 def main():
     """
-    Main function to prepare test data for model evaluation.
+    Main function to prepare test data for evaluating the fine-tuned model.
 
     Steps:
     - Load the dataset to create a mapping from image filenames to labels.
