@@ -8,26 +8,12 @@ Date: Nov. 1, 2024
 Description:
 This script contains a collection of utility functions for processing images and preparing data for fine-tuning GPT models, specifically for tasks like identifying the year of cars in images. The functions cover various steps such as encoding images, extracting years from class names and responses, computing accuracy, preparing datasets, and more.
 
-Functions Included:
-- encode_image(image_path): Encodes an image file to a base64 string.
-- extract_ground_truth_year(class_name): Extracts the first four-digit year from the class name string.
-- extract_predicted_years(response): Extracts all four-digit years and year ranges from a given response string.
-- is_correct_prediction(ground_truth_year, predicted_years): Checks if the ground truth year is present in the predicted years.
-- compute_accuracy(df_test): Computes the accuracy of model predictions by comparing ground truth with predictions.
-- plot_per_model_accuracy(df_test): Generates a per-model accuracy plot and displays a confusion matrix-like table.
-- make_test_data(df): Prepares test and prompt datasets for GPT zero-shot and few-shot examples.
-- show_prompt_images(prompt_df): Displays images from the prompt DataFrame in a grid layout.
-- check_and_convert_image_modes(image_paths): Checks images for correct mode and converts them to RGB if necessary.
-- prepare_ft_data(df): Prepares data for fine-tuning by splitting the dataset and creating JSONL files.
-- create_jsonl(selected_data, jsonl_path, image_paths_file, image_dir): Creates a JSONL file from the selected data for fine-tuning.
-- save_batch_id(batch_id, key): Saves the batch ID to a JSON file under the specified key.
-- load_batch_id(key): Loads the batch ID from the JSON file using the specified key.
-
 """
 
 import pandas as pd
 import os
 import re
+import ast
 import base64
 import random
 import json
@@ -556,3 +542,115 @@ def load_batch_id(key):
     else:
         print(f"Batch file '{BATCH_FILE}' not found.")
         return None
+
+def post_process(df_responses_base_model):
+    """
+    Processes a DataFrame containing model responses to extract content and years.
+
+    This function performs post-processing on a DataFrame that contains the raw JSON responses from a GPT model. It extracts the 'content' field from each response, parses it to retrieve the textual content, and then extracts years mentioned in that content using the `extract_years_from_content` function. The extracted content and years are added as new columns to the DataFrame. 
+
+    Parameters:
+    - df_responses_base_model (pd.DataFrame): A DataFrame containing model responses with a 'response' column, where each entry is a JSON string representing the model's response.
+
+    Returns:
+    - pd.DataFrame: The updated DataFrame with additional columns:
+        - 'content': The extracted textual content from the model's response.
+        - 'extracted_years': A list of years extracted from the content.
+    """
+    # Initialize a list to store extracted content
+    contents = []
+    
+    for index, row in df_responses_base_model.iterrows():
+        json_str = row['response']
+    
+        try:
+            # Remove the starting and ending double quotes if present
+            if json_str.startswith('"') and json_str.endswith('"'):
+                json_str = json_str[1:-1]
+    
+            # Safely evaluate the string as a Python literal
+            response_dict = ast.literal_eval(json_str)
+            # Navigate to the 'content' field
+            content = response_dict['body']['choices'][0]['message']['content']
+            # Store the content
+            contents.append(content)
+        except Exception as e:
+            # In case of parsing error, append None
+            contents.append(None)
+            print(f"Error parsing row {index}: {e}")
+    
+    # Add the extracted content to the DataFrame
+    df_responses_base_model['content'] = contents
+
+    extracted_years_list = []
+
+    for content in df_responses_base_model['content'].to_list():
+        if pd.notnull(content):
+            years = extract_years_from_content(content)
+            extracted_years_list.append(years)
+        else:
+            extracted_years_list.append(None)
+    
+    df_responses_base_model['extracted_years'] = extracted_years_list
+
+    df_responses_base_model.reset_index(inplace=True)
+    df_responses_base_model['index'] = df_responses_base_model['index'].astype(int)
+
+    return df_responses_base_model
+
+def extract_years_from_content(content):
+    """
+    Extracts all four-digit years and year ranges from a given text content.
+
+    This function scans the input text for patterns that represent years (e.g., "2012")
+    and year ranges (e.g., "2010-2012", "from 2010 to 2012", "between 2010 and 2012").
+    It accounts for various ways years and ranges might be mentioned in the text,
+    including different delimiters and phrasing.
+
+    Parameters:
+    - content (str): The text content from which to extract years and year ranges.
+
+    Returns:
+    - years_list (list of str): A sorted list of unique years (as strings) extracted from the content.
+
+    Notes:
+    - The function handles years in the range from 1900 to 2099.
+    - For year ranges, all years within the range are included in the output list.
+    - Duplicate years are removed, and the final list is sorted in ascending order.
+    - The function is useful for parsing textual responses where years are mentioned
+      in various formats, ensuring comprehensive extraction of relevant years.
+
+    """
+    years_list = []
+
+    range_patterns = [
+        r'from\s+(\b(?:19|20)\d{2})\s+to\s+(\b(?:19|20)\d{2})',
+        r'between\s+(\b(?:19|20)\d{2})\s+and\s+(\b(?:19|20)\d{2})',
+        r'produced\s+(?:from|between)\s+(\b(?:19|20)\d{2})\s+(?:to|and)\s+(\b(?:19|20)\d{2})',
+        r'\b(?:model\s+years?|years?)\s+(\b(?:19|20)\d{2})\s*(?:-|to|–|—)\s*(\b(?:19|20)\d{2})',
+        r'(\b(?:19|20)\d{2})\s*-\s*(\b(?:19|20)\d{2})',
+        r'around\s+(\b(?:19|20)\d{2})\s*(?:-|to|–|—)?\s*(\b(?:19|20)\d{2})?',
+    ]
+
+    for pattern in range_patterns:
+        matches = re.findall(pattern, content)
+        for match in matches:
+            years_in_match = [year for year in match if year]
+            if len(years_in_match) == 2:
+                start_year = int(years_in_match[0])
+                end_year = int(years_in_match[1])
+                if start_year > end_year:
+                    start_year, end_year = end_year, start_year
+                years = [str(year) for year in range(start_year, end_year + 1)]
+                years_list.extend(years)
+            elif len(years_in_match) == 1:
+                years_list.append(years_in_match[0])
+
+    single_year_pattern = r'\b(?:19|20)\d{2}\b'
+    single_years = re.findall(single_year_pattern, content)
+    years_list.extend(single_years)
+
+    years_list = list(set(years_list))
+    years_list.sort()
+
+    return years_list
