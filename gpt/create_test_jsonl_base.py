@@ -19,15 +19,13 @@ from tqdm import tqdm
 import pandas as pd
 import gpt_utils
 
-proj_dir = f'/zfs/projects/darc/nrapstin_hht_image_ai'
-
 # Define file paths and constants
-TEST_IMAGE_PATHS_FILE = f'{proj_dir}/stanford-cars/gpt/data/fine-tune/test_image_paths.txt'
-TEST_JSONL = f'{proj_dir}/stanford-cars/gpt/data/fine-tune/test_base_model.jsonl'
-TEST_LABELS_FILE = f'{proj_dir}/stanford-cars/gpt/data/fine-tune/test_labels.json'
+TEST_IMAGE_PATHS_FILE = 'data/fine-tune/test_image_paths.txt'
+TEST_JSONL = 'data/fine-tune/test_base_model.jsonl'
+TEST_LABELS_FILE = 'data/fine-tune/test_labels.json'
 MODEL = "gpt-4o-2024-08-06"
-IMAGE_DIR = f'{proj_dir}/stanford-cars/data/images'
-data_file = f"{proj_dir}/stanford-cars/data/train.csv"
+IMAGE_DIR = '/scratch/shared/image_ai_HHT_data/images/' 
+data_file = '/scratch/shared/image_ai_HHT_data/train.csv' 
 
 def main():
     """

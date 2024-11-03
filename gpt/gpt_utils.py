@@ -307,20 +307,13 @@ def check_and_convert_image_modes(image_paths):
 
 
 
+import os
+import random
+
 def prepare_ft_data(df):
     """
     Prepares data for fine-tuning by splitting the dataset into training, validation, and test sets,
     converting images to RGB format if necessary, and creating JSONL files for training.
-
-    Steps:
-    - Extracts 'Ground Truth Year' from 'Class Name' in the DataFrame.
-    - Splits data into training, validation, and test sets for each class.
-    - Adjusts counts if there are not enough images per class.
-    - Shuffles images and assigns them to respective sets.
-    - Checks if JSONL files already exist to avoid redundant processing.
-    - Converts non-RGB images to RGB format.
-    - Creates JSONL files for training and validation data.
-    - Saves test image paths for later use.
 
     Parameters:
     - df (pandas.DataFrame): DataFrame containing image data and class labels.
@@ -341,11 +334,10 @@ def prepare_ft_data(df):
     train_count = 15
     val_count = 10
     test_count = 10
- 
 
     for cls in classes:
         cls_df = df[df['Ground Truth Year'] == cls]
-        image_paths = cls_df['image'].tolist()
+        image_paths = cls_df['image_path'].tolist()
         num_images = len(image_paths)
     
         # Check if we have enough images
@@ -386,44 +378,69 @@ def prepare_ft_data(df):
     # Create directories if they do not exist
     os.makedirs(fine_tune_dir, exist_ok=True)
     
+    # Collect and write train image paths
+    train_image_paths = []
+    for cls, paths in train_data.items():
+        for path in paths:
+            if image_dir:
+                full_path = os.path.join(image_dir, path)
+            else:
+                full_path = path  # Assuming 'image_path' already contains full paths
+            train_image_paths.append(full_path)
+    
+    with open(train_image_paths_file, 'w') as f:
+        for path in train_image_paths:
+            f.write(f"{path}\n")
+
+    # Collect and write validation image paths
+    val_image_paths = []
+    for cls, paths in val_data.items():
+        for path in paths:
+            if image_dir:
+                full_path = os.path.join(image_dir, path)
+            else:
+                full_path = path
+            val_image_paths.append(full_path)
+    
+    with open(val_image_paths_file, 'w') as f:
+        for path in val_image_paths:
+            f.write(f"{path}\n")
+
+    # Collect and write test image paths
+    test_image_paths = []
+    for cls, paths in test_data.items():
+        for path in paths:
+            if image_dir:
+                full_path = os.path.join(image_dir, path)
+            else:
+                full_path = path
+            test_image_paths.append(full_path)
+    
+    with open(test_image_paths_file, 'w') as f:
+        for path in test_image_paths:
+            f.write(f"{path}\n")
+
     # Check if JSONL files already exist
     if os.path.exists(train_jsonl_path) and os.path.exists(val_jsonl_path):
         print("JSONL files already exist. Skipping creation.")
     else:
-        # Create JSONL files for training and validation data
-
         # Process training images
-        with open(train_image_paths_file, 'r') as f:
-            train_image_paths = [line.strip() for line in f.readlines()]
-        
         # Check and convert non-RGB images in training data
         check_and_convert_image_modes(train_image_paths)
         
-        # Recreate JSONL file after conversion
-        create_jsonl(train_data, train_jsonl_path, train_image_paths_file, image_dir)
+        # Create JSONL file after conversion
+        create_jsonl(train_data, train_jsonl_path, 'data/fine-tune/train_image_paths.txt', image_dir)
 
         # Process validation images
-        with open(val_image_paths_file, 'r') as f:
-            val_image_paths = [line.strip() for line in f.readlines()]
-        
         # Check and convert non-RGB images in validation data
         check_and_convert_image_modes(val_image_paths)
         
-        create_jsonl(val_data, val_jsonl_path, val_image_paths_file, image_dir)
-
-    # Save test image paths with full paths
-    with open(test_image_paths_file, 'w') as f:
-        for cls, paths in test_data.items():
-            for path in paths:
-                full_path = os.path.join(image_dir, path)
-                f.write(f"{full_path}\n")
+        create_jsonl(val_data, val_jsonl_path, 'data/fine-tune/val_image_paths.txt', image_dir)
 
     # Process test images
-    with open(test_image_paths_file, 'r') as f:
-        test_image_paths = [line.strip() for line in f.readlines()]
-    
     # Check and convert non-RGB images in test data
     check_and_convert_image_modes(test_image_paths)
+
 
 
 def create_jsonl(selected_data, jsonl_path, image_paths_file, image_dir):
