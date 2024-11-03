@@ -24,7 +24,6 @@ from PIL import Image
 
 random.seed(42)
 
-proj_dir = f'/zfs/projects/darc/nrapstin_hht_image_ai'
 image_dir = f'/scratch/shared/image_ai_HHT_data/images'
 BATCH_FILE = 'data/batches.json'
 
@@ -40,7 +39,13 @@ def encode_image(image_path):
     """
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
-        
+
+def generate_image_objects(image_paths):
+    """
+    Generate image objects for the system prompt.
+    """
+    return [{"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{encode_image(image_path)}"}} for image_path in image_paths]
+
 def extract_ground_truth_year(class_name):
     """
     Extracts the first four-digit year from the class name string.
