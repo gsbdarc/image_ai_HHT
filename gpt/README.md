@@ -34,5 +34,5 @@ Run the notebook with `gpt` as a kernel:
 3. [`gpt-few-shot.ipynb`](gpt-few-shot.ipynb)
 4. [`gpt-vision-fine-tune.ipynb`](gpt-vision-fine-tune.ipynb)
    - Before fine-tuning, run [`create_test_jsonl_base.py`](create_test_jsonl_base.py)
-   - After fine-tuning, edit the python file to have the fine-tuned model name then run [create_test_jsonl_fine_tuned.py](`create_test_jsonl_fine_tuned.py`)
+   - After fine-tuning, edit the python file to have the fine-tuned model name then run [`create_test_jsonl_fine_tuned.py`](create_test_jsonl_fine_tuned.py)
 6. [`gpt-eval.ipynb`](gpt-eval.ipynb)
