@@ -305,11 +305,6 @@ def check_and_convert_image_modes(image_paths):
         except Exception as e:
             print(f"Error processing image {image_path}: {e}")
 
-
-
-import os
-import random
-
 def prepare_ft_data(df):
     """
     Prepares data for fine-tuning by splitting the dataset into training, validation, and test sets,
@@ -440,7 +435,6 @@ def prepare_ft_data(df):
     # Process test images
     # Check and convert non-RGB images in test data
     check_and_convert_image_modes(test_image_paths)
-
 
 
 def create_jsonl(selected_data, jsonl_path, image_paths_file, image_dir):
