@@ -23,4 +23,4 @@ source venv/bin/activate
 export HF_HOME="/scratch/shared/$USER/.cache/huggingface"
 
 # Run python script on GPU
-python multi_modal_infer.py --image_path ../data/images/00001.jpg --prompt_text "Describe this image" 
+python multi_modal_infer.py --image_path /scratch/shared/image_ai_HHT_data/images/00001.jpg --prompt_text "Describe this image" 

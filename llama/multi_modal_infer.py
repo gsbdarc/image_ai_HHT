@@ -1,3 +1,7 @@
+"""
+Example from: https://github.com/meta-llama/llama-recipes/tree/main/recipes/quickstart/inference/local_inference
+"""
+
 import argparse
 import os
 import sys
