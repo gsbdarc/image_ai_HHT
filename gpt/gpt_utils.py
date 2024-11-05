@@ -117,51 +117,51 @@ def is_prediction_correct(df_test):
 
     return df_test
 
-def plot_per_model_accuracy(df_test):
+def plot_per_year_accuracy(df_test):
     """
-    Generates a per-model accuracy plot and prints a confusion matrix-like table showing
-    the number of correct and incorrect predictions for each car model.
+    Generates a per-year accuracy plot and prints a confusion matrix-like table showing
+    the number of correct and incorrect predictions for each year.
 
     Parameters:
-        df_test (pd.DataFrame): The test DataFrame containing 'Class Name' and 'Correct Prediction'.
+        df_test (pd.DataFrame): The test DataFrame containing 'Ground Truth Year' and 'Correct Prediction'.
 
     Returns:
         None
         
     """
-    # Group by 'Class Name' and 'Correct Prediction' and count the occurrences
-    confusion = df_test.groupby(['Class Name', 'Correct Prediction']).size().reset_index(name='Count')
+    # Group by 'Ground Truth Year' and 'Correct Prediction' and count the occurrences
+    confusion = df_test.groupby(['Ground Truth Year', 'Correct Prediction']).size().reset_index(name='Count')
     
     # Pivot the table to have 'Correct Prediction' as columns
-    confusion_pivot = confusion.pivot(index='Class Name', columns='Correct Prediction', values='Count').fillna(0)
+    confusion_pivot = confusion.pivot(index='Ground Truth Year', columns='Correct Prediction', values='Count').fillna(0)
     
     # Ensure columns are ordered as False, True
     confusion_pivot = confusion_pivot.reindex(columns=[False, True], fill_value=0)
     
-    # Print the confusion matrix-like table
-    # print(confusion_pivot)
-
-    # Compute total predictions per class
+    # Compute total predictions per year
     confusion_pivot['Total'] = confusion_pivot[False] + confusion_pivot[True]
     
-    # Compute accuracy per class
+    # Compute accuracy per year
     confusion_pivot['Accuracy'] = confusion_pivot[True] / confusion_pivot['Total']
     
     # Display the confusion matrix with accuracy
     print(confusion_pivot[[False, True, 'Total', 'Accuracy']])
-
-    # Reset index to make 'Class Name' a column
-    confusion_pivot_reset = confusion_pivot.reset_index()
     
-    # Plot per-class accuracy
-    plt.figure(figsize=(5, 5))
-    plt.bar(confusion_pivot_reset['Class Name'], confusion_pivot_reset['Accuracy'])
-    plt.xticks(rotation=45, ha='right')
+    # Reset index to make 'Ground Truth Year' a column
+    confusion_pivot_reset = confusion_pivot.reset_index()
+    confusion_pivot_reset['Ground Truth Year'] = confusion_pivot_reset['Ground Truth Year'].astype(int)
+
+    # Plot per-year accuracy with integer years on the x-axis and y-axis from 0 to 1
+    plt.figure(figsize=(5, 4))
+    plt.bar(confusion_pivot_reset['Ground Truth Year'], confusion_pivot_reset['Accuracy'], color='darkred')
+    plt.xticks(confusion_pivot_reset['Ground Truth Year'], rotation=45, ha='right')
+    plt.ylim(0, 1)  # Set y-axis range from 0 to 1
+    plt.xlabel('Year')
     plt.ylabel('Accuracy')
-    plt.title('Per-Model Accuracy')
+    plt.title('Per-Year Accuracy')
     plt.tight_layout()
     plt.show()
-    
+
 
 def make_test_data(df):
     """
